@@ -1,3 +1,6 @@
+#This file was used to try a lot of things out to get to where I wanted with creating 
+#TermDocument Matrices Next file "createTDM.R" takes all the best stuff from here
+
 library(tm)
 dataURL <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
 download.file(dataURL, destfile = "textdata.zip")
