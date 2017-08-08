@@ -1,3 +1,7 @@
+#Finding creating a TermDocument Matrix with the tm package quite tedious, i decided to
+# create my own function to create the matrix. It only takes about 2 minutes to turn 800 MB
+#of documents (3 total) into a TDM matrix
+
 library(tm)
 #Function to download relevant files
 downloadFiles <- function(){
@@ -103,11 +107,13 @@ TDMlister <- function(docs){#argument docs is a list of documents
         length
 
 
-#Below we need a way to replace NA with 0
+#Below we need a way to replace NA with 0. This function was borrowed from a stack overflow
+# answer. https://stackoverflow.com/questions/7235657/fastest-way-to-replace-nas-in-a-large-data-table
 f_dowle2 = function(DT) {
         for (i in names(DT))
                 DT[is.na(get(i)), (i):=0]
 }
+#this function
 
 #Now make a function that does it all from start to finish
 mymerge = function(x,y) merge(x,y,all=TRUE)#function suggested by SO for DT merges
@@ -116,6 +122,14 @@ createTDM <- function(docs){ #takes a list of documents to make into TDM
 }
         TDM <- createTDM(doclist)
 
+
 #Now that there is a TDM for unigrams it has to be done with bigrams and trigrams
 #Maybe the ngram package has something for me here
 
+key(TDM)
+
+#The URL below is for a github repo that contains a list of english 
+#words in a newline delimited text file. (for sourcing)
+        "https://github.com/dwyl/english-words"
+        #the direct link is below
+        englishWordsURL <- "https://github.com/dwyl/english-words/blob/master/words_alpha.txt"
