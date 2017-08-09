@@ -6,25 +6,209 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,cache = TRUE)
+library(data.table)
+```
+##Overview
+This is an exploratory analysis of the english language blog, news and twitter exerpts downloaded from the following url: https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip. You can follow the progress of this project at https://github.com/clavell/predict-text. First a Term Document Matrix was created using the script found in the appendix.
+This document term matrix contains all of the terms as rows and the number of occurances of these terms in each document (blog, news and twitter) as columns. The purpose of this analysis is to load the data and summarize it in a basic way. The ultimate use of this data will be in the creation of a text prediction algorithm, however, that is for another day.
+
+##Loading the Data
+First a Term Document Matrix was created using the script found in the appendix.
+```{r appendix A, include=FALSE, cache=TRUE}
+#Finding creating a TermDocument Matrix with the tm package quite tedious, i decided to
+# create my own function to create the matrix. It only takes about 2 minutes to turn 800 MB
+#of documents (3 total) into a TDM matrix
+
+#Function to download relevant files
+downloadFiles <- function(){
+        if(!dir.exists("final")){
+                dataURL <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+                download.file(dataURL, destfile = "textdata.zip")
+                unzip("textdata.zip")
+        }
+}
+loadDocs <- function(){ #this function is unfinished! Fix it later
+        downloadFiles()
+        if(!any(grepl("doclist",ls(.GlobalEnv)))){
+                allFiles <- grep("final/*",dir(".",recursive = TRUE, 
+                                               include.dirs = FALSE),value = TRUE)
+                
+                filenums <- grep("en",allFiles)
+                doclist <- list()
+                for(i in seq_along(filenums)){
+                        doclist[[i]] <- readLines(allFiles[filenums[i]])
+                }
+                names(doclist) <- allFiles[filenums]
+                assign("doclist",doclist,envir = .GlobalEnv)
+        }   
+}
+loadDocs()
+#code from SO answer provided a good insight into how to make a TDM more efficiently
+#https://stackoverflow.com/questions/25330753/more-efficient-means-of-creating-a-corpus-and-dtm-with-4m-rows
+
+#function to make a TermDocumentMatrix in data.table form from 1 document
+singledoc <- function(doc,docnum){
+        if(is.null(docnum))stop()
+        require(ngram)
+        require(stringi)
+        require(data.table)
+      
+        words <- stri_extract_all_words(concatenate(stri_trans_tolower(doc)))
+        data <- data.table(theterms = unlist(words))
+        data[,new :=.N,by=theterms]
+        names(data) <- c("theterms", paste0("doc",docnum))
+        data <- data[,unique(data)]
+        setkey(data,theterms)
+        data
+}
+
+#now make a list of data.tables. Each element is a dtm for a single document
+#here is the function to do it generally
+TDMlister <- function(docs){#argument docs is a list of documents
+        TDMList <- list()
+        for(i in seq_along(docs)){
+                TDMList[[i]] <- singledoc(docs[[i]], i)
+        }
+        TDMList #list of data.table TermdocumentMatrices (one for each document)
+}
+
+
+#Now make a function that does it all from start to finish
+mymerge = function(x,y) merge(x,y,all=TRUE)#function suggested by SO for DT merges
+createTDM <- function(docs){ #takes a list of documents to make into TDM
+        Reduce(mymerge,TDMlister(docs))
+}
+
+#Create the Term document matrix and remove all of the extraneous things
+        TDM <- createTDM(doclist)
+        
+#This creates a data.table full of NAs where there are no entries for a particular 
+#term and doc. The function bellow was borrowed from a stack overflow answer: 
+#https://stackoverflow.com/questions/7235657/fastest-way-to-replace-nas-in-a-large-data-table
+#It replaces all NA values in the table with 0.
+f_dowle2 = function(DT) {
+        for (i in names(DT))
+                DT[is.na(get(i)), (i):=0]
+}
+
+        f_dowle2(TDM)
+
+#now to rename the columns for easy reference                
+renameDocs <- function(){
+        allFiles <- grep("final/*",dir(".",recursive = TRUE, 
+                                       include.dirs = FALSE),value = TRUE)
+        
+        filenums <- grep("en",allFiles)
+        
+        x <- c("terms",allFiles[filenums])
+        x <- gsub("final/en_US/en_US.","",x)
+        x <- gsub(".txt", "",x)
+        x
+}
+        names(TDM) <- renameDocs()
+#Now let's clean up the environment.
+        #rm(list = grep("[^(doclist|TDM)]",ls(),value = TRUE))
+        
+#Now that there is a TDM for unigrams it has to be done with bigrams and trigrams
+#Maybe the ngram package has something for me here. To be continued
+
+
+#The URL below is for a github repo that contains a list of english 
+#words in a newline delimited text file. (for sourcing)
+        #"https://github.com/dwyl/english-words"
+        #the direct link is below
+        #englishWordsURL <- "https://github.com/dwyl/english-words/blob/master/words_alpha.txt"
+```
+The only preprocessing done at this time is to put all words in lowercase. This prevents there being many entries of each word. However, words with punctuation will be considered as separate entries. This could be useful in the case of finding the ends of sentences so that words on either sides of sentence boundaries don't affect next word predictions in the final application of next word prediction.
+
+##Exploration
+Now we look at the data in detail.
+
+First we look at the number of entries in each of the documents. An entry can be as short as one sentence or as long a lengthy paragraph. 
+```{r}
+lapply(doclist,length)
+```
+As shown there are about 1 million entries for each of the blog and news documents and 2.4 million entries the twitter document. If we look at the total word count, however, we see a different story.
+```{r words,cached=TRUE}
+lapply(TDM[,2:4],sum)
+```
+As can be seen there are ~38 million words in the blogs document, ~34 million in the news document and ~30 million in the twitter document. This shouldn't be surprising as the  twitter document has a limit of 140 characters per entry. So, even though the twitter document has more than 2 times the number of entries as the blogs document, its word count is only ~75% of the blogs document's word count.
+
+Next we look at the unique occurances of words in the documents.
+```{r}
+lapply(as.data.table(TDM[,.SD>0][,2:4]),sum)
+```
+Shown here, we see that twitter has the most unique occurances. Maybe this is due to the large amount of slang and typos that would be fine in twitter, but maybe not ok in a more formal written post like a blog or especially a news article. Doing a google search we see that there are only about 170 000 words currently used in the english language.
+
+If we take out the words with punctuation and the words with numbers we can look at how the unique word count changes. We can look at the number of shared words in the documents as well. See the code to create it in the appendix
+```{r intersection, include=FALSE}
+#let's look at the intersection of words in the documents
+        #removing the entries with punctuation (except apostrophe) we reduce the number of entries by 11%
+        require(data.table)
+        TDMnopunct <- TDM[!grepl("[.,\\/#!$%\\^&\\*;:{}=\\-_`~()']",terms)]
+        #nrow(TDMnopunct)/nrow(TDM)
+        #removing entries with numbers as well 
+        TDMnonum <- TDMnopunct[!grepl("\\d",terms)]
+        #nrow(TDMnonum)/nrow(TDM)
+        #now let's look at 
+        intersect <- TDM[,.N,.(blogs >0,news>0,twitter>0)][,type := "unaltered"]
+        intersectnopunct <- TDMnopunct[,.N,.(blogs >0,news>0,twitter>0)][,type := "nopunct"]
+        intersectnonum <-TDMnonum[,.N,.(blogs >0,news>0,twitter>0)][,type:="nonum"]
+        #make a table showing intersection of words found in the documents in an unaltered
+        #state, with punctuation removed and as with numbers removed.
+              
+        mymerge = function(x,y) merge(x,y,all=TRUE)#function suggested by SO for DT merges
+        intersections <-   Reduce(mymerge,list(intersect,intersectnopunct,intersectnonum))[order(-type)]
+        intersectable <-dcast(intersections,blogs+news+twitter~type,value.var = "N")
+        lapply(as.data.table(TDMnonum[,.SD>0][,2:4]),sum)
 ```
 
-## R Markdown
+```{r, include=FALSE}
+intersectable
+```
+This shows that there are over 200 thousand words used only in twitter, ~140 thousand words used only in news and ~170 thousand words used only in blogs and only ~90 thousand words that are used in all three of the source types.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+Another way we could look at it would be to take words that appear more than once, which would remove uncommon typos and one of a kind exclamations that people might make.
+```{r}
+lapply(as.data.table(TDMnonum[,.SD>1][,2:4]),sum)
+```
+This brings our data into the realm of the english language. Much fewer than the 170 thousand words used in english. If we look at the words with the highest counts we see that they are stopwords like "the" and "at". Removing those we can get a better look at the more interesting words. First let's look at the most frequent words in the news articles:
+```{r}
+require(tm)
+TDMnonum[!stopwords()][order(-news)][1:10]
+```
+Now the most frequent words in the blogs document:
+```{r}
+require(tm)
+TDMnonum[!stopwords()][order(-blogs)][1:10]
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Now the most frequent words in the twitter document:
+```{r}
+TDMnonum[!stopwords()][order(-twitter)][1:10]
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Now lets look at the layout of the frequency of words used more than one thousand times each in at least one document.
+```{r}
+require(ggplot2)
+graphdat <- TDMnonum[rowSums(TDMnonum[,.SD>1000][,2:4]) >0][!stopwords()]
+g <- ggplot(graphdat)
+g + geom_histogram(aes(x=news))
+g + geom_histogram(aes(x=blogs))
+g + geom_histogram(aes(x=twitter))
+```
+This shows a pretty similar layout between the types of documents.
+
+##Prediction Algorithm Plans
+The next step is to create a prediction algorithm. This algorithm will require the creation of more term document matrices only with bigrams(two word combinations) and trigrams(three word combinations) as the terms. These will be made into arrays and the frequencies of the so-called n-grams will be used to create probabilities that the computer will use to predict the next word. A prototype of this idea, using just bigrams can be found in the R script at the following URL https://github.com/clavell/predict-text/blob/master/twitterUS.R. So far there is nothing being done about the word combinations that don't exist or for words that have not been seen. I'm currently looking at the backoff model for unseen n-grams.
+
+##Appendix
+Here is the code to load the data and make the Term Document Matrix
+```{r appendix A, eval=FALSE,include=TRUE}
+```
+Here is the code for the creation of the table that shows the intersections of words in the documents.
+```{r intersection, eval=FALSE}
+```
+
