@@ -142,7 +142,7 @@ lapply(as.data.table(TDM[,.SD>0][,2:4]),sum)
 Shown here, we see that twitter has the most unique occurances. Maybe this is due to the large amount of slang and typos that would be fine in twitter, but maybe not ok in a more formal written post like a blog or especially a news article. Doing a google search we see that there are only about 170 000 words currently used in the english language.
 
 If we take out the words with punctuation and the words with numbers we can look at how the unique word count changes. We can look at the number of shared words in the documents as well. See the code to create it in the appendix
-```{r intersection, include=FALSE}
+```{r intersection, echo=FALSE}
 #let's look at the intersection of words in the documents
         #removing the entries with punctuation (except apostrophe) we reduce the number of entries by 11%
         require(data.table)
@@ -164,7 +164,7 @@ If we take out the words with punctuation and the words with numbers we can look
         lapply(as.data.table(TDMnonum[,.SD>0][,2:4]),sum)
 ```
 
-```{r, include=FALSE}
+```{r}
 intersectable
 ```
 This shows that there are over 200 thousand words used only in twitter, ~140 thousand words used only in news and ~170 thousand words used only in blogs and only ~90 thousand words that are used in all three of the source types.

@@ -10,7 +10,7 @@ downloadFiles <- function(){
                 unzip("textdata.zip")
         }
 }
-loadDocs <- function(){ #this function is unfinished! Fix it later
+loadDocs <- function(){
         downloadFiles()
         if(!any(grepl("doclist",ls(.GlobalEnv)))){
                 allFiles <- grep("final/*",dir(".",recursive = TRUE, 
@@ -30,7 +30,7 @@ loadDocs()
 #https://stackoverflow.com/questions/25330753/more-efficient-means-of-creating-a-corpus-and-dtm-with-4m-rows
 
 #function to make a TermDocumentMatrix in data.table form from 1 document
-singledoc <- function(doc,docnum){
+singledoc <- function(doc,docnum){#doc is a character vector
         if(is.null(docnum))stop()
         require(ngram)
         require(stringi)

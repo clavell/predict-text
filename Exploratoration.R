@@ -15,7 +15,7 @@ renameDocs <- function(){
 }
         names(TDM) <- renameDocs()
         #clean up the environment
-        rm(list = grep("[^(doclist|TDM)]",ls(),value = TRUE))
+        rm(list = grep("[^(doclist|TDM|quantCorpus)]",ls(),value = TRUE))
         
         
 #word count function
@@ -59,16 +59,7 @@ super <- TDM[,.SD>0]
 
 TDMlister(doclist)
 
-#messing around with melt and cast
-library(data.table)
-names(ChickWeight) <- tolower(names(ChickWeight))
-DT <- melt(as.data.table(ChickWeight), id=2:4) # calls melt.data.table
-DT[,unique(variable)]
-# dcast is a S3 method in data.table from v1.9.6
-dcast(DT, time ~ variable, fun=mean)
-dcast(DT, diet ~ variable, fun=mean)
-dcast(DT, diet+chick ~ time, drop=FALSE)
-dcast(DT, diet+chick ~ time, drop=FALSE, fill=0)
-
-
-
+TDM[,totals := rowSums(TDM[,2:4])]
+TDM[,percentage := totals/sum(totals)*100]
+TDM[order(-totals)][1:100]
+TDM[sum(percentage)]

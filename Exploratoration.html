@@ -168,6 +168,23 @@ $(document).ready(function () {
 ## [1] 370386</code></pre>
 <p>Shown here, we see that twitter has the most unique occurances. Maybe this is due to the large amount of slang and typos that would be fine in twitter, but maybe not ok in a more formal written post like a blog or especially a news article. Doing a google search we see that there are only about 170 000 words currently used in the english language.</p>
 <p>If we take out the words with punctuation and the words with numbers we can look at how the unique word count changes. We can look at the number of shared words in the documents as well. See the code to create it in the appendix</p>
+<pre><code>## $blogs
+## [1] 269036
+## 
+## $news
+## [1] 213145
+## 
+## $twitter
+## [1] 291789</code></pre>
+<pre class="r"><code>intersectable</code></pre>
+<pre><code>##    blogs  news twitter  nonum nopunct unaltered
+## 1: FALSE FALSE    TRUE 168844  188295    227250
+## 2: FALSE  TRUE   FALSE  87706   96469    137817
+## 3: FALSE  TRUE    TRUE  15499   17343     21588
+## 4:  TRUE FALSE   FALSE 133773  143043    165351
+## 5:  TRUE FALSE    TRUE  25323   27102     29526
+## 6:  TRUE  TRUE   FALSE  27817   29048     33106
+## 7:  TRUE  TRUE    TRUE  82123   85313     92022</code></pre>
 <p>This shows that there are over 200 thousand words used only in twitter, ~140 thousand words used only in news and ~170 thousand words used only in blogs and only ~90 thousand words that are used in all three of the source types.</p>
 <p>Another way we could look at it would be to take words that appear more than once, which would remove uncommon typos and one of a kind exclamations that people might make.</p>
 <pre class="r"><code>lapply(as.data.table(TDMnonum[,.SD&gt;1][,2:4]),sum)</code></pre>
