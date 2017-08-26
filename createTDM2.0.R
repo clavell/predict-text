@@ -22,26 +22,26 @@ tokenstoDT <- function(tokens){
 }
 
 #check against fread document to see which rows aren't reading in right
-        them <- which(!(document.1.frea[,theterms] == document.1[,theterms]))
-        quotes <- document.1[them,unique(theterms)]
-        quotes.frea <- document.1.frea[them,unique(theterms)]
-        document.1[(ind-6):(ind+6)]
-        sum(as.integer(counts))
-        sum(as.integer(counts.frea))
-        counts <- character()
-        counts.frea <- character()
-        
-        document.1[them]
-        
-        for(i in quotes){
-                counts[i] <- document.1[theterms == i,.N]
-        }
-        for(i in quotes.frea){ 
-                counts.frea[i] <- document.1.frea[theterms == i,.N]
-        }
-        
-        sum(as.integer(counts.frea[2:length(counts.frea)]))
-        sum(as.integer(counts[2:length(counts)]))
+        # them <- which(!(document.1.frea[,theterms] == document.1[,theterms]))
+        # quotes <- document.1[them,unique(theterms)]
+        # quotes.frea <- document.1.frea[them,unique(theterms)]
+        # document.1[(ind-6):(ind+6)]
+        # sum(as.integer(counts))
+        # sum(as.integer(counts.frea))
+        # counts <- character()
+        # counts.frea <- character()
+        # 
+        # document.1[them]
+        # 
+        # for(i in quotes){
+        #         counts[i] <- document.1[theterms == i,.N]
+        # }
+        # for(i in quotes.frea){ 
+        #         counts.frea[i] <- document.1.frea[theterms == i,.N]
+        # }
+        # 
+        # sum(as.integer(counts.frea[2:length(counts.frea)]))
+        # sum(as.integer(counts[2:length(counts)]))
         #didn't find a solution as the counts found are different
         
         
@@ -65,23 +65,6 @@ multisplit <- function(docs){#expects a list
 
 
                
-#use just a small set to test functions
-        shortdocs2 <- lapply(doclist,lapply,head,100)
-        shortdoc <- shortdocs[[1]]$train
-#make a document to test with
-        document.1 <- docAsDT(doclist$`final/en_US/en_US.blogs.txt`$train,"blog")
-#after we have the document in a data table form we can replicate the column offset by
-#one to show the bigrams
-        
-        
-        document.1[,bi:=c(theterms[2:.N],NA)]
-        document.1[,tri:=c(theterms[3:.N],NA,NA)]
-        document.1[,conc := paste(theterms,bi,sep="_")]
-        document.1[,docname := NULL]
-        document.1 <- document.1[theterms != ""]
-        fwrite(document.1,file = "blogasDT.csv")
-        document.1.frea <- fread("blogasDT.csv")
-        TDMbi <- document.1[,.N,by=.(theterms,bi)]
 
 #create a function to turn a document into a TDM
 createTDM2.0 <- function(doc,N,name){#document is a character vector, N is the type of N-gram
@@ -101,25 +84,25 @@ createTDM2.0 <- function(doc,N,name){#document is a character vector, N is the t
         fwrite(TDM,filename)
         TDM
 }
-
+shortbloguniTDM <- createTDM2.0(shortdocs2[[1]]$train,1,"cuz")
 
 
 #check the blogTDM made by createTDM2.0 against the TDM fread in.
-        uniTDMblog <- createTDM2.0(shortdocs$`final/en_US/en_US.blogs.txt`$train,1,"blog")
-        uniTDMblog.frea <- fread("blog.TDM.csv")
-        identical(uniTDMblog,uniTDMblog.frea)
-        #yet again these are not identical..
-        all(uniTDMblog[,blog] == uniTDMblog.frea[,blog])#all counts are the same
-        uniTDMblog[715];uniTDMblog.readcsv[715] #it's just the tokens that aren't all the same
-        
-        #try reading in with read.csv and changing to data.table
-        uniTDMblog.readcsv <- read.csv("blog.TDM.csv")
-        uniTDMblog.readcsv <- as.data.table(uniTDMblog.readcsv)
-        identical(uniTDMblog,uniTDMblog.readcsv) 
-        #this says they aren't identical but if we check their columns..
-        identical(uniTDMblog[,blog],uniTDMblog.readcsv[,blog]) #TRUE
-        identical(uniTDMblog[,uni], uniTDMblog.readcsv[,uni]) #FALSE 
-        all(uniTDMblog[,uni] == uniTDMblog.readcsv[,uni]) #TRUE (this is weird 
+        # uniTDMblog <- createTDM2.0(shortdocs$`final/en_US/en_US.blogs.txt`$train,1,"blog")
+        # uniTDMblog.frea <- fread("blog.TDM.csv")
+        # identical(uniTDMblog,uniTDMblog.frea)
+        # #yet again these are not identical..
+        # all(uniTDMblog[,blog] == uniTDMblog.frea[,blog])#all counts are the same
+        # uniTDMblog[715];uniTDMblog.readcsv[715] #it's just the tokens that aren't all the same
+        # 
+        # #try reading in with read.csv and changing to data.table
+        # uniTDMblog.readcsv <- read.csv("blog.TDM.csv")
+        # uniTDMblog.readcsv <- as.data.table(uniTDMblog.readcsv)
+        # identical(uniTDMblog,uniTDMblog.readcsv) 
+        # #this says they aren't identical but if we check their columns..
+        # identical(uniTDMblog[,blog],uniTDMblog.readcsv[,blog]) #TRUE
+        # identical(uniTDMblog[,uni], uniTDMblog.readcsv[,uni]) #FALSE 
+        # all(uniTDMblog[,uni] == uniTDMblog.readcsv[,uni]) #TRUE (this is weird 
         #that all and identical get different results. oh well.. it seems fread is the problem, not
         #fwrite)
 
@@ -153,13 +136,14 @@ TDMlister <- function(docs,N){#argument docs is a list of documents,N is passed 
         TDMList#list of data.table TermdocumentMatrices (one for each document)
 }
 
-corpusTDMcreator <- function(corpus,n,name=NULL,toGlobal=TRUE){
+
+corpusTDMcreator <- function(corpus,n,name=NULL,toGlobal=TRUE){#corpus is a list of character vectors, n is the ngram
         if(is.null(name)) name <- deparse(substitute(corpus))#get the name of the corpus object (list of docs)
         combineTDM(TDMlister(corpus,n),name,toGlobal)#give the TDM a name
       
 }
 
-#now let's make all of the possible TDM's up to four-grams at once for the corpus
+#now let's make all of the possible TDM's up to five-grams at once for the corpus
 multiTDMs <- function(corp,ngrams,List=FALSE){#corp is a list of documents(corpus), ngrams is a sequence
                                                                      #min 1, max 5
         if(max(ngrams)>5|min(ngrams)<1) stop()
@@ -180,22 +164,22 @@ multiTDMs <- function(corp,ngrams,List=FALSE){#corp is a list of documents(corpu
         }
 }
         
+#use just a small set to test functions
+        shortdocs2 <- lapply(doclist,lapply,head,100)
 
 #Now, let's use the shortdocs with our functions to check if the functions work properly
         #to keep separate from the real thing change names slightly
         names(shortdocs2) <- paste("short-",names(shortdocs2),sep="")
         #to avoid creating new directories replace the slashes with dashes
-        names(shortdocs2) <- gsub(x=names(shortdocs2),"/","-")
+        (names(shortdocs2) <- gsub(x=names(shortdocs2),"/","-"))
         
-        TDMuniList <- TDMlister(shortdocs,1)
-        combineTDM(TDMuniList,"dude")
-       shortdocsUniTDM <- combineTDM(TDMlister(shortdocs,1))
+        
+        multiTDMs(shortdocs2,2)
+       
        TDMlist <- multiTDMs(shortdocs,1:3,List=TRUE)
        TDMlist[[2]][, setdiff(names(TDMlist[[2]]), c("uni","bi","tri")), with = FALSE]
        
        system.time(multiTDMs(shortdocs2,1:4,List=TRUE))
        
        loadDocs()
-       multisplit(doclist)
-       system.time(docAsDT(doclist[[1]]$train,"fulltwit.DT"))
        
