@@ -1,10 +1,10 @@
 #create a new way of storing ngrams: Just offset the corpus by one.
 #first make a data table of eachword in the corpus
-docAsDT <- function(doc,docname){#doc is a character vector
+docAsDT <- function(doc,docname){#doc is a character vector,at this point docname names the output file
         require(quanteda)
         require(stringi)
         require(data.table)
-        filename <- paste(docname,".csv",sep="")
+        # filename <- paste(docname,".csv",sep="")
         #in trying to make things faster down the road i attempted to make the function
         #read in a previously made document. Unfortunately it either reads or writes the
         #data incorrectly, so the time saving was abandonned in favor of reproducibility
@@ -163,7 +163,61 @@ multiTDMs <- function(corp,ngrams,List=FALSE){#corp is a list of documents(corpu
                 assign(paste(name,"TDMs",sep=""),ListofTDMs, .GlobalEnv)
         }
 }
+
+#to make multi-TDM creation more efficient, use docAsDT only once per doc and create the TDM
+#for each desired n-gram tokenizer before moving on to the next doc. This is no more space
+#inefficient and computationally much more efficient.
+createtokens <- function(DTdoc,N){#DTdoc is a document that has been uni tokenized, 
+                                        #N is vector of unique integers N>=1, N<=5
+        if(!is.data.table(DTdoc))stop()
+        if(length(DTdoc) > 1)stop()
+        if(names(DTdoc)!="theterms")stop()
+        possibilities <- c("uni","bi","tri","four","five")
+        DTdoc[,newf := theterms]
+        for(i in 1:max(N)){
+                DTdoc[,newf:=c(theterms[i:.N],rep(NA,i-1))]
+                setnames(DTdoc, "newf",possibilities[i])
+        }
+        DTdoc[,theterms:=NULL]
+}
+
+
+createTDM2.1 <- function(doc,N,name){#doc is a tokenized document in data.table form,
+                                        #N is the type of N-gram, 
+                                        #name is the name of the document
+        possibilities <- c("uni","bi","tri","four","five",1,2,3,4,5)
+        if(!N %in% possibilities)stop()
+        if(is.character(N)) N=grep(N,possibilities)
+        TDM <- doc[,.N,by=eval(names(doc)[1:N])]
+        names(TDM) <- c(possibilities[1:N],name)
+        filename <- paste(name,possibilities[N],".TDM",sep="")
+        #fwrite(TDM,filename)
+       
+        assign(filename,TDM,parent.frame(2))#this makes it not work when called from global env
         
+} 
+   
+#overall function layout
+        #takes document list element by element
+                #creates tokenized version
+                #creates a TDM for each type of ngram
+        #combines the TDMs by ngram tyoe
+        #returns TDMs or list of TDMs
+
+TDMsforOneDoc <- function(doc,n,docname){#doc is character vector of documents, 
+                                        #n is vector of unique integers n>=1, n<=5
+
+        name <- paste(deparse(substitute(doc)),docname,sep="")
+        docAsDT(doc,"whocares")
+        createtokens(document,n)
+        for(i in n){
+                createTDM2.1(document, i, name)
+                TDMname <- c(name)
+        }
+        stop()
+        TDMlist <- list()
+        #assign(paste(name,".TDMlist",sep=""),)
+}
 #use just a small set to test functions
         shortdocs2 <- lapply(doclist,lapply,head,100)
 
@@ -174,9 +228,11 @@ multiTDMs <- function(corp,ngrams,List=FALSE){#corp is a list of documents(corpu
         (names(shortdocs2) <- gsub(x=names(shortdocs2),"/","-"))
         
         
+        
+        TDMsforOneDoc(shortdocs2,1)
         multiTDMs(shortdocs2,2)
        
-       TDMlist <- multiTDMs(shortdocs,1:3,List=TRUE)
+       TDMlist <- multiTDMs(shortdocs2,1:3,List=TRUE)
        TDMlist[[2]][, setdiff(names(TDMlist[[2]]), c("uni","bi","tri")), with = FALSE]
        
        system.time(multiTDMs(shortdocs2,1:4,List=TRUE))
