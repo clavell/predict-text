@@ -13,15 +13,17 @@ downloadFiles <- function(){
 loadDocs <- function(){
         downloadFiles()
         if(!any(grepl("doclist",ls(.GlobalEnv)))){
-                allFiles <- grep("final/*",dir(".",recursive = TRUE, 
+                allFiles <- grep("en",dir("./final",recursive = TRUE, 
                                                include.dirs = FALSE),value = TRUE)
                 
                 filenums <- grep("en",allFiles)
                 doclist <- list()
                 for(i in seq_along(filenums)){
-                        doclist[[i]] <- readLines(allFiles[filenums[i]])
+                        doclist[[i]] <- readLines(paste("final/",allFiles[filenums[i]],sep=""))
                 }
                 names(doclist) <- allFiles[filenums]
+                #to avoid creating new directories replace the slashes with dashes
+                names(doclist) <- gsub(x=names(doclist),"/","-")
                 assign("doclist",doclist,envir = .GlobalEnv)
         }   
 }
@@ -68,14 +70,14 @@ createTDM <- function(docs){ #takes a list of documents to make into TDM
 #term and doc. The function bellow was borrowed from a stack overflow answer: 
 #https://stackoverflow.com/questions/7235657/fastest-way-to-replace-nas-in-a-large-data-table
 #It replaces all NA values in the table with 0.
-f_dowle2 = function(DT) {
-        for (i in names(DT))
-                DT[is.na(get(i)), (i):=0]
-}
-
+        f_dowle2 = function(DT) {
+                for (i in names(DT))
+                        DT[is.na(get(i)), (i):=0]
+        }
+        
         f_dowle2(TDM)
 #Now let's clean up the environment.
-        #rm(list = grep("[^(doclist|TDM)]",ls(),value = TRUE))
+        rm(list = grep("[^(doclist|TDM)]",ls(),value = TRUE))
         
 #Now that there is a TDM for unigrams it has to be done with bigrams and trigrams
 #Maybe the ngram package has something for me here. To be continued

@@ -5,18 +5,46 @@ docAsDT <- function(doc,docname){#doc is a character vector
         require(stringi)
         require(data.table)
         filename <- paste(docname,".csv",sep="")
-        if(file.exists(filename)) return(fread(filename))
+        #in trying to make things faster down the road i attempted to make the function
+        #read in a previously made document. Unfortunately it either reads or writes the
+        #data incorrectly, so the time saving was abandonned in favor of reproducibility
+        #if(file.exists(filename)) return(fread(filename))
         tokens <- tokenize(stri_trans_tolower(doc))
         data.1 <- tokenstoDT(tokens = tokens)
-        data.1 <- data.1[theterms != ""]
-        fwrite(data.1,filename)
-        data.1
+        data.1 <- data.1[theterms != ""]#remove the several empty cells
+        #fwrite(data.1,filename)
+        assign("document",data.1,parent.frame(1))
 }
 
 tokenstoDT <- function(tokens){
         tokens <- unlist(tokens)
         data.table(theterms=tokens)
 }
+
+#check against fread document to see which rows aren't reading in right
+        them <- which(!(document.1.frea[,theterms] == document.1[,theterms]))
+        quotes <- document.1[them,unique(theterms)]
+        quotes.frea <- document.1.frea[them,unique(theterms)]
+        document.1[(ind-6):(ind+6)]
+        sum(as.integer(counts))
+        sum(as.integer(counts.frea))
+        counts <- character()
+        counts.frea <- character()
+        
+        document.1[them]
+        
+        for(i in quotes){
+                counts[i] <- document.1[theterms == i,.N]
+        }
+        for(i in quotes.frea){ 
+                counts.frea[i] <- document.1.frea[theterms == i,.N]
+        }
+        
+        sum(as.integer(counts.frea[2:length(counts.frea)]))
+        sum(as.integer(counts[2:length(counts)]))
+        #didn't find a solution as the counts found are different
+        
+        
 
 #should make a training and test set
 split.em <- function(doc){#characer vector
@@ -38,7 +66,7 @@ multisplit <- function(docs){#expects a list
 
                
 #use just a small set to test functions
-        shortdocs <- lapply(doclist,lapply,head,100)
+        shortdocs2 <- lapply(doclist,lapply,head,100)
         shortdoc <- shortdocs[[1]]$train
 #make a document to test with
         document.1 <- docAsDT(doclist$`final/en_US/en_US.blogs.txt`$train,"blog")
@@ -55,24 +83,119 @@ multisplit <- function(docs){#expects a list
         document.1.frea <- fread("blogasDT.csv")
         TDMbi <- document.1[,.N,by=.(theterms,bi)]
 
+#create a function to turn a document into a TDM
 createTDM2.0 <- function(doc,N,name){#document is a character vector, N is the type of N-gram
         possibilities <- c("uni","bi","tri","four","five",1,2,3,4,5)
         if(!N %in% possibilities)stop()
         if(is.character(N)) N=grep(N,possibilities)
-        if(file.exists(paste(name,".csv",sep=""))){
-                
-        }
-        document <- docAsDT(doc)
+        if(!"document" %in% ls())docAsDT(doc,name)
         document[,newf := theterms]
         for(i in 1:N){
                 document[,newf:=c(theterms[i:.N],rep(NA,i-1))]
                 names(document) <- c("theterms",possibilities[1:i])
         }
         document[,theterms:=NULL]
-        document[,.N,by=names(document)]
+        TDM <- document[,.N,by=names(document)]
+        names(TDM) <- c(possibilities[1:N],name)
+        filename <- paste(name,possibilities[N],".TDM.csv",sep="")
+        fwrite(TDM,filename)
+        TDM
 }
 
-docAsDT(shortdoc,"blah")
 
-triTDMblog <- createTDM2.0(doclist$`final/en_US/en_US.blogs.txt`$train,3)
-document.1[25412963]
+
+#check the blogTDM made by createTDM2.0 against the TDM fread in.
+        uniTDMblog <- createTDM2.0(shortdocs$`final/en_US/en_US.blogs.txt`$train,1,"blog")
+        uniTDMblog.frea <- fread("blog.TDM.csv")
+        identical(uniTDMblog,uniTDMblog.frea)
+        #yet again these are not identical..
+        all(uniTDMblog[,blog] == uniTDMblog.frea[,blog])#all counts are the same
+        uniTDMblog[715];uniTDMblog.readcsv[715] #it's just the tokens that aren't all the same
+        
+        #try reading in with read.csv and changing to data.table
+        uniTDMblog.readcsv <- read.csv("blog.TDM.csv")
+        uniTDMblog.readcsv <- as.data.table(uniTDMblog.readcsv)
+        identical(uniTDMblog,uniTDMblog.readcsv) 
+        #this says they aren't identical but if we check their columns..
+        identical(uniTDMblog[,blog],uniTDMblog.readcsv[,blog]) #TRUE
+        identical(uniTDMblog[,uni], uniTDMblog.readcsv[,uni]) #FALSE 
+        all(uniTDMblog[,uni] == uniTDMblog.readcsv[,uni]) #TRUE (this is weird 
+        #that all and identical get different results. oh well.. it seems fread is the problem, not
+        #fwrite)
+
+#now that we have a somewhat working TDM creator for a single document, let's make 
+#functions that make a TDM with multiple documents!
+combineTDM <- function(TDMlist,docname,toGlobal=TRUE){#takes a list of TDMs(data.tables)
+        TDMtype <- names(TDMlist[[1]])[length(TDMlist[[1]])-1]
+        TDMname <- paste(docname,TDMtype,"TDM",sep="")
+        mymerge = function(x,y) merge(x,y,all=TRUE)#function suggested by SO for DT merges
+        
+        fullTDM <- Reduce(mymerge,TDMlist)
+        f_dowle2.1(fullTDM)
+        if(toGlobal) assign(TDMname,fullTDM,.GlobalEnv)
+
+        if(!toGlobal) assign(TDMname,fullTDM,parent.frame(2))
+}
+
+f_dowle2.1 = function(DT) {
+        types <- c("uni","bi","tri","four","five")
+        for (i in setdiff(names(DT), types))
+                DT[is.na(get(i)), (i):=0]
+}
+
+
+TDMlister <- function(docs,N){#argument docs is a list of documents,N is passed to 
+                                                                        #createTDM2.0
+        TDMList <- list()
+        for(i in seq_along(docs)){
+                TDMList[[i]] <- createTDM2.0(doc = docs[[i]]$train,N,name = names(docs)[i])
+        }
+        TDMList#list of data.table TermdocumentMatrices (one for each document)
+}
+
+corpusTDMcreator <- function(corpus,n,name=NULL,toGlobal=TRUE){
+        if(is.null(name)) name <- deparse(substitute(corpus))#get the name of the corpus object (list of docs)
+        combineTDM(TDMlister(corpus,n),name,toGlobal)#give the TDM a name
+      
+}
+
+#now let's make all of the possible TDM's up to four-grams at once for the corpus
+multiTDMs <- function(corp,ngrams,List=FALSE){#corp is a list of documents(corpus), ngrams is a sequence
+                                                                     #min 1, max 5
+        if(max(ngrams)>5|min(ngrams)<1) stop()
+        name <- deparse(substitute(corp))
+        for(i in ngrams){
+            corpusTDMcreator(corp,i,name,!List)    
+        }
+        if(List){
+                ListofTDMs <- list()
+                possibilities <- c("uni","bi","tri","four","five")
+                TDMname <- character()
+                for(i in ngrams){
+                        TDMname[i] <- paste(name,possibilities[i],"TDM",sep="")
+                        ListofTDMs[[i]] <- get(TDMname[i])
+                }
+                names(ListofTDMs) <- TDMname
+                assign(paste(name,"TDMs",sep=""),ListofTDMs, .GlobalEnv)
+        }
+}
+        
+
+#Now, let's use the shortdocs with our functions to check if the functions work properly
+        #to keep separate from the real thing change names slightly
+        names(shortdocs2) <- paste("short-",names(shortdocs2),sep="")
+        #to avoid creating new directories replace the slashes with dashes
+        names(shortdocs2) <- gsub(x=names(shortdocs2),"/","-")
+        
+        TDMuniList <- TDMlister(shortdocs,1)
+        combineTDM(TDMuniList,"dude")
+       shortdocsUniTDM <- combineTDM(TDMlister(shortdocs,1))
+       TDMlist <- multiTDMs(shortdocs,1:3,List=TRUE)
+       TDMlist[[2]][, setdiff(names(TDMlist[[2]]), c("uni","bi","tri")), with = FALSE]
+       
+       system.time(multiTDMs(shortdocs2,1:4,List=TRUE))
+       
+       loadDocs()
+       multisplit(doclist)
+       system.time(docAsDT(doclist[[1]]$train,"fulltwit.DT"))
+       
