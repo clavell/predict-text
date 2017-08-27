@@ -230,7 +230,7 @@ TDMsforOneDoc <- function(doc,n,docname){#doc is character vector of documents,
         
         
         TDMsforOneDoc(shortdocs2,1)
-        multiTDMs(shortdocs2,2)
+        multiTDMs(shortdocs2,1:4)
        
        TDMlist <- multiTDMs(shortdocs2,1:3,List=TRUE)
        TDMlist[[2]][, setdiff(names(TDMlist[[2]]), c("uni","bi","tri")), with = FALSE]
@@ -239,3 +239,37 @@ TDMsforOneDoc <- function(doc,n,docname){#doc is character vector of documents,
        
        loadDocs()
        
+#Maybe a function to make the first n-1 words of ngrams into one column to save space
+combineInitial <- function(TDM){
+        columns <- ncol(TDM)
+        possibilities <- c("uni","bi","tri","four","five")
+        type <- sum(possibilities %in% names(TDM))
+        TDM[,FirstTerms := do.call(paste,.SD),.SDcols=1:(type-1)]
+        setcolorder(TDM,c(columns+1,1:columns))
+        TDM[,possibilities[1:(type-1)]:=NULL]
+}
+
+getTotals <- function(TDM,deleteOthers = FALSE){
+        possibilities <- c("uni","bi","tri","four","five")
+        if(is.null(TDM$Sum)){
+        TDM[,Sum := Reduce(`+`, .SD),.SDcols = setdiff(names(TDM),c(possibilities))]
+        }
+        if(deleteOthers){
+                columnstoremove <- setdiff(names(TDM),c("Sum",possibilities))
+                TDM[,(columnstoremove):=NULL]
+        }
+}
+
+load("TDMlist.rds")
+lapply(shortdocs2TDMs,getTotals)
+getTotals(shortdocs2TDMs[[2]])
+shortdocs2TDMs[[1]][,Sum := Reduce(`+`, .SD),.SDcols = setdiff(names(shortdocs2TDMs[[1]]),c("Sum",possibilities))]
+columnstoremove <- setdiff(names(shortdocs2TDMs[[1]]),c("Sum",possibilities))
+shortdocs2TDMs[[1]][,(columnstoremove):=NULL]
+
+multiTDMs(shortdocs2,1:4,List=TRUE)
+setdiff(shortdocs2TDMs[[1]],possibilities,names(shortdocs2TDMs[[1]]))
+
+object.size(shortdocs2TDMs)/10^6
+combineInitial(shortdocs2TDMs[[4]])
+substitute("possibilities")
