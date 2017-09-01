@@ -15,4 +15,6 @@ learningtidyverse.R
 nextCommit
 wordfish.R
 quanteda.R
-TDMlist.R
+TDMlist.rds
+LenaDocs*
+lenas.R

@@ -12,7 +12,7 @@ downloadFiles <- function(){
 }
 loadDocs <- function(){
         downloadFiles()
-        if(!any(grepl("doclist",ls(.GlobalEnv)))){
+        if(!any(grepl("doclist$",ls(.GlobalEnv)))){
                 allFiles <- grep("en",dir("./final",recursive = TRUE, 
                                                include.dirs = FALSE),value = TRUE)
                 

@@ -13,7 +13,7 @@ docAsDT <- function(doc,docname){#doc is a character vector,at this point docnam
         data.1 <- tokenstoDT(tokens = tokens)
         data.1 <- data.1[theterms != ""]#remove the several empty cells
         #fwrite(data.1,filename)
-        assign("document",data.1,parent.frame(1))
+        data.1
 }
 
 tokenstoDT <- function(tokens){
@@ -84,7 +84,7 @@ createTDM2.0 <- function(doc,N,name){#document is a character vector, N is the t
         fwrite(TDM,filename)
         TDM
 }
-shortbloguniTDM <- createTDM2.0(shortdocs2[[1]]$train,1,"cuz")
+
 
 
 #check the blogTDM made by createTDM2.0 against the TDM fread in.
@@ -193,8 +193,8 @@ createTDM2.1 <- function(doc,N,name){#doc is a tokenized document in data.table 
         filename <- paste(name,possibilities[N],".TDM",sep="")
         #fwrite(TDM,filename)
        
-        assign(filename,TDM,parent.frame(2))#this makes it not work when called from global env
-        
+        #assign(filename,TDM,parent.frame(2))#this makes it not work when called from global env
+        TDM
 } 
    
 #overall function layout
@@ -204,32 +204,33 @@ createTDM2.1 <- function(doc,N,name){#doc is a tokenized document in data.table 
         #combines the TDMs by ngram tyoe
         #returns TDMs or list of TDMs
 
-TDMsforOneDoc <- function(doc,n,docname){#doc is character vector of documents, 
+TDMsforOneDoc <- function(doc,n,docname){#doc is a document as a datatable; tokenized, 
                                         #n is vector of unique integers n>=1, n<=5
 
         name <- paste(deparse(substitute(doc)),docname,sep="")
-        docAsDT(doc,"whocares")
-        createtokens(document,n)
-        for(i in n){
-                createTDM2.1(document, i, name)
-                TDMname <- c(name)
-        }
-        stop()
         TDMlist <- list()
+        for(i in n){
+               TDMlist[[i]] <- createTDM2.1(doc, i, name)
+
+        }
+        TDMlist
         #assign(paste(name,".TDMlist",sep=""),)
 }
+
+corpusMultiTDM <- function(corp){
+        
+}
+
+
+
 #use just a small set to test functions
         shortdocs2 <- lapply(doclist,lapply,head,100)
 
 #Now, let's use the shortdocs with our functions to check if the functions work properly
         #to keep separate from the real thing change names slightly
         names(shortdocs2) <- paste("short-",names(shortdocs2),sep="")
-        #to avoid creating new directories replace the slashes with dashes
-        (names(shortdocs2) <- gsub(x=names(shortdocs2),"/","-"))
         
         
-        
-        TDMsforOneDoc(shortdocs2,1)
         multiTDMs(shortdocs2,1:4)
        
        TDMlist <- multiTDMs(shortdocs2,1:3,List=TRUE)
@@ -260,8 +261,24 @@ getTotals <- function(TDM,deleteOthers = FALSE){
         }
 }
 
+Tablemaker <- function(DT,wordfreqs=c(1,2,100,200)){#takes TDM, desired ngram counts
+        DTname <- deparse(substitute(DT))
+        if(!exists(paste(DTname,"$Sum")))getTotals(DT)
+        totalngrams <- DT[,sum(Sum)]
+        thetable <- data.table(tablename = DTname)
+        for(i in wordfreqs){
+                        columnname <- paste("frequency >",i)
+                        thetable[,get("columnname") := DT[Sum>i,.(sum(Sum))]/totalngrams]
+        }
+        thetable
+}
+
+
+
+combineInitial(doclistTDMs[[3]])
 load("TDMlist.rds")
-lapply(shortdocs2TDMs,getTotals)
+getTotals(doclistTDMs[[1]],TRUE)
+lapply(doclistTDMs,getTotals,deleteOthers = TRUE)
 getTotals(shortdocs2TDMs[[2]])
 shortdocs2TDMs[[1]][,Sum := Reduce(`+`, .SD),.SDcols = setdiff(names(shortdocs2TDMs[[1]]),c("Sum",possibilities))]
 columnstoremove <- setdiff(names(shortdocs2TDMs[[1]]),c("Sum",possibilities))
