@@ -12,7 +12,7 @@ rsconnect*
 RWekaattempt.R
 *.csv
 learningtidyverse.R
-nextCommit
+nextCommit*
 wordfish.R
 quanteda.R
 TDMlist.rds

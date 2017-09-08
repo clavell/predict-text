@@ -1,3 +1,5 @@
+library(data.table)
+
 #create a new way of storing ngrams: Just offset the corpus by one.
 #first make a data table of eachword in the corpus
 docAsDT <- function(doc,docname){#doc is a character vector,at this point docname names the output file
@@ -217,11 +219,58 @@ TDMsforOneDoc <- function(doc,n,docname){#doc is a document as a datatable; toke
         #assign(paste(name,".TDMlist",sep=""),)
 }
 
-corpusMultiTDM <- function(corp){
+getTrainingSet <- function(splitDoc){#splitDoc is a document split into a two entry list:
+                                        #$train and $test
+        splitDoc$train
         
 }
 
+TDMsforManydocs <- function(corp,n){#corp is list of documents for which you want TDMs:
+                                        #must be already split into $train and $test
+                                        #n is a vector of unique integers n>=1, n<=5
+        require(magrittr)
+        
+        TDMs <- list()
+        for(i in seq_along(corp)){
+                TDMs[[i]] <- getTrainingSet(corp[[i]]) %>% 
+                         docAsDT("name") %>%
+                         createtokens(n) %>%
+                         TDMsforOneDoc(n,names(corp)[i])
+        }
+        
+        names(TDMs) <- names(corp)
+                c("uni", "bi", "tri", "four", "five")[1:length(n)]
+        TDMs
+        
+}
 
+combineByType <- function(TDMs){#TDMs is a list of TDMs arranged by document
+        
+        #find a non null TDM to 
+        index <- which(sapply(TDMs[[1]],length) == max(sapply(TDMs[[1]],length)))
+        finallist <- list()
+        
+        for(i in 1:(length(TDMs[[1]][[index]])-1)){
+                #if(!is.null(TDMs[[i]][[i]])){
+                finallist[[i]] <- lapply(TDMs, "[[", i) %>%
+                                 combiner()
+                f_dowle2.1(finallist[[i]])
+                #}
+        }
+        finallist
+}
+
+combiner <- function(TDMs){ #takes a list of documents to make into TDM
+        Reduce(mymerge,TDMs)
+}
+
+TermDocumentMatrices <- function(corp,n){#corp is list of documents for which you want TDMs:
+                                        #must be already split into $train and $test
+                                        #n is a vector of unique integers n>=1, n<=5
+        require(magrittr)
+        corp %>% TDMsforManydocs(n) %>%
+                combineByType()
+}
 
 #use just a small set to test functions
         shortdocs2 <- lapply(doclist,lapply,head,100)
@@ -229,17 +278,9 @@ corpusMultiTDM <- function(corp){
 #Now, let's use the shortdocs with our functions to check if the functions work properly
         #to keep separate from the real thing change names slightly
         names(shortdocs2) <- paste("short-",names(shortdocs2),sep="")
-        
-        
-        multiTDMs(shortdocs2,1:4)
+
        
-       TDMlist <- multiTDMs(shortdocs2,1:3,List=TRUE)
-       TDMlist[[2]][, setdiff(names(TDMlist[[2]]), c("uni","bi","tri")), with = FALSE]
-       
-       system.time(multiTDMs(shortdocs2,1:4,List=TRUE))
-       
-       loadDocs()
-       
+
 #Maybe a function to make the first n-1 words of ngrams into one column to save space
 combineInitial <- function(TDM){
         columns <- ncol(TDM)
@@ -253,12 +294,13 @@ combineInitial <- function(TDM){
 getTotals <- function(TDM,deleteOthers = FALSE){
         possibilities <- c("uni","bi","tri","four","five")
         if(is.null(TDM$Sum)){
-        TDM[,Sum := Reduce(`+`, .SD),.SDcols = setdiff(names(TDM),c(possibilities))]
+        TDM[,Sum := Reduce(`+`, .SD),.SDcols = setdiff(names(TDM),possibilities)]
         }
         if(deleteOthers){
                 columnstoremove <- setdiff(names(TDM),c("Sum",possibilities))
                 TDM[,(columnstoremove):=NULL]
         }
+        
 }
 
 Tablemaker <- function(DT,wordfreqs=c(1,2,100,200)){#takes TDM, desired ngram counts
@@ -273,20 +315,4 @@ Tablemaker <- function(DT,wordfreqs=c(1,2,100,200)){#takes TDM, desired ngram co
         thetable
 }
 
-
-
-combineInitial(doclistTDMs[[3]])
-load("TDMlist.rds")
-getTotals(doclistTDMs[[1]],TRUE)
-lapply(doclistTDMs,getTotals,deleteOthers = TRUE)
-getTotals(shortdocs2TDMs[[2]])
-shortdocs2TDMs[[1]][,Sum := Reduce(`+`, .SD),.SDcols = setdiff(names(shortdocs2TDMs[[1]]),c("Sum",possibilities))]
-columnstoremove <- setdiff(names(shortdocs2TDMs[[1]]),c("Sum",possibilities))
-shortdocs2TDMs[[1]][,(columnstoremove):=NULL]
-
-multiTDMs(shortdocs2,1:4,List=TRUE)
-setdiff(shortdocs2TDMs[[1]],possibilities,names(shortdocs2TDMs[[1]]))
-
-object.size(shortdocs2TDMs)/10^6
-combineInitial(shortdocs2TDMs[[4]])
-substitute("possibilities")
+doclistTDMs[[1]][grep("^/",uni)]
