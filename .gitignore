@@ -18,3 +18,5 @@ quanteda.R
 TDMlist.rds
 LenaDocs*
 lenas.R
+badwords*
+test/

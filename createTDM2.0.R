@@ -300,7 +300,7 @@ getTotals <- function(TDM,deleteOthers = FALSE){
                 columnstoremove <- setdiff(names(TDM),c("Sum",possibilities))
                 TDM[,(columnstoremove):=NULL]
         }
-        
+        TDM
 }
 
 Tablemaker <- function(DT,wordfreqs=c(1,2,100,200)){#takes TDM, desired ngram counts
@@ -315,4 +315,4 @@ Tablemaker <- function(DT,wordfreqs=c(1,2,100,200)){#takes TDM, desired ngram co
         thetable
 }
 
-doclistTDMs[[1]][grep("^/",uni)]
+
