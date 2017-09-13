@@ -1,37 +1,26 @@
-index
+Text Prediction App
 ========================================================
-author: 
-date: 
+author: Joseph Christopher Lavell
+date: September 13th, 2017
 autosize: true
 
-First Slide
+Overview
 ========================================================
 
-For more details on authoring R presentations please visit <https://support.rstudio.com/hc/en-us/articles/200486468>.
+-Drawing on the power of ~720 MB of documents drawn from commonly accessed internet sources and the data.table package, the app uses the most frequent bi-,tri- and quadra-grams to predict your next word.
 
-- Bullet 1
-- Bullet 2
-- Bullet 3
+-The algorithm suggests the fourth word of the most frequent of kosher quadragrams found in the corpus starting with the previous 3 terms entered. 
 
-Slide With Code
+-In the absence of a matching entry, the algorith looks to tri-gram and bi-gram models for a suggestion. 
+
+-In the absence of any word at all, a random word is suggested.
+
+How to use it
+========================================================
+-Simply type into the text box and have a word suggested for you. 
+-Clear the box and have a random word suggested. 
+-However, if you do choose the random word and follow the next suggestions, you'll be in for a wild non-sensical ride!
+
+Please enjoy responsibly
 ========================================================
 
-
-```r
-summary(cars)
-```
-
-```
-     speed           dist       
- Min.   : 4.0   Min.   :  2.00  
- 1st Qu.:12.0   1st Qu.: 26.00  
- Median :15.0   Median : 36.00  
- Mean   :15.4   Mean   : 42.98  
- 3rd Qu.:19.0   3rd Qu.: 56.00  
- Max.   :25.0   Max.   :120.00  
-```
-
-Slide With Plot
-========================================================
-
-![plot of chunk unnamed-chunk-2](index-figure/unnamed-chunk-2-1.png)
