@@ -11,30 +11,54 @@ library(shiny)
 library(data.table)
 library(stringi)
 library(magrittr)
+library(googledrive)
+library(RMySQL)
+convertWord <- function(predictor,conversionTable){
+        conversionTable[predictor,which=TRUE]
+}
 shinyServer(function(input, output) {
-         tri <- fread("../trigrampredictiontable.csv")
-         setkey(tri,uni,bi)
-       bi <- fread("../bigrampredictiontable.csv")
-       setkey(bi,uni)
-       # x <- reactive({
-       #         a = input$firstWords %>% stri_extract_last_words() %>% stri_trans_tolower()
-       #         })
-       #  z <- "be"
+        capstoneDb <- dbConnect(MySQL(),user="capstone", dbname = "capstone",
+                                host="localhost",password = "posTrooF!2")
+        zipname<-"conversionTable.zip"
+        drive_download(zipname)
+        unzip(zipname)
+         conversiontable <- fread("./uniTDM.csv")
+          setkey(tri,uni,bi)
+       # bi <- fread("../bigrampredictiontable.csv")
+       # setkey(bi,uni)
+       
        y <- reactive({
              
-                 steve <- input$firstWords %>% stri_trans_tolower() %>% 
+                 input <- input$firstWords %>% stri_trans_tolower() %>% 
                          stri_extract_all_words() %>% unlist()
+                 wordIndices <- c(input[length(input)-1],input[length(input)]) %>%
+                         sapply(convertWord,conversiontable)
                
-                 if(length(steve) >= 2){
-       tripred <- doclistTDMs[[3]][.(steve[length(steve)-1],steve[length(steve)])]$tri
-                         
-                         if(!is.na(tripred)){
+                 if(length(input) >= 2){
+       #tripred <- tri[.(input[length(input)-1],input[length(input)])]$tri
+                         selector <- "select tri from triTDM where uni ="
+                         query <- paste(selector,wordIndices[1],"and bi =",wordIndices[2])
+                        tripred <- dbGetQuery(capstoneDb, query)$tri %>% IndextoWord()
+                         #if(!is.na(tripred)){
                                  tripred
-                         }else{
-                                 doclistTDMs[[2]][steve[length(steve)]]$bi
-                         }
+                         #}else{
+                          #       doclistTDMs[[2]][input[length(input)]]$bi
+                         #}
                  }
-          #       paste(steve[length(steve)-1],steve[length(steve)])
+          #       paste(input[length(input)-1],input[length(input)])
         })
         output$prediction <- renderText(y())
 })
+
+# drawing on the power of 800 MB of documents drawn from commonly accessed internet sources, the app
+# uses the most frequent bi-,tri- and quadra-grams to predict your next word.
+
+#Simply type into the text box and have a word suggested for you.
+
+#The token frequency database was created using the speed of the data.table package to allow
+#the use of the entire corpus
+
+
+
+
+

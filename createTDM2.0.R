@@ -286,9 +286,11 @@ combineInitial <- function(TDM){
         columns <- ncol(TDM)
         possibilities <- c("uni","bi","tri","four","five")
         type <- sum(possibilities %in% names(TDM))
-        TDM[,FirstTerms := do.call(paste,.SD),.SDcols=1:(type-1)]
-        setcolorder(TDM,c(columns+1,1:columns))
-        TDM[,possibilities[1:(type-1)]:=NULL]
+        if(type > 2){
+                TDM[,FirstTerms := do.call(paste,.SD),.SDcols=1:(type-1)]
+                setcolorder(TDM,c(columns+1,1:columns))
+                TDM[,possibilities[1:(type-1)]:=NULL]
+        }
 }
 
 getTotals <- function(TDM,deleteOthers = FALSE){

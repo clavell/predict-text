@@ -2,6 +2,7 @@
 library(data.table)
 library(stringi)
 library(magrittr)
+library(googlesheets)
 
 #pull apart a string of words and put those words in the thing
 
@@ -235,38 +236,40 @@ object.size(bestTop100$FirstTerms)/10^6
 #There is a large number of numbers with units. Those could be replaced with a single marker
 #i.e. length could represent all numbers ending in mm, cm, in, etc.
 
-times <- c("^[0-9]+[aApP][mM]$")
-lengths <- c("^[0-9].*m$",)
-position#(first, second, etc.)
+        times <- c("^[0-9]+[aApP][mM]$")
+        lengths <- c("^[0-9].*m$",)
+        position#(first, second, etc.)
+        date #1920s
 #could also consolidate synonyms
 
 uncombine <- function(TDM){#make sure to set this to an object
-        require(quanteda)
-        columnNums <- 1:length(unlist(tokenize(TDM$FirstTerms[1])))
-        possibilities <- c("uni", "bi", "tri", "four", "five")
-        columns <- tstrsplit(TDM$FirstTerms,split = " ") %>% 
-                as.data.table() %>% setnames(possibilities[columnNums])
-        TDM[,FirstTerms:=NULL]
-        cbind(columns,TDM)
+        if(!is.null(TDM$FirstTerms)){
+                require(quanteda)
+                columnNums <- 1:length(unlist(tokenize(TDM$FirstTerms[1])))
+                possibilities <- c("uni", "bi", "tri", "four", "five")
+                columns <- tstrsplit(TDM$FirstTerms,split = " ") %>% 
+                        as.data.table() %>% setnames(possibilities[columnNums])
+                TDM[,FirstTerms:=NULL]
+                cbind(columns,TDM)
+        }else{TDM}
 }
 
 
-bestTop100 <- uncombine(bestTop100)
+        bestTop100 <- uncombine(bestTop100)
+        
+        object.size(bestTop100[!grep("^[0-9]",FirstTerms)])
+        key(bestTop100)
+        
+        bestTop100[,unique(bi)]
+        setkey(doclistTDMs[[2]],uni)
+        bipred <- doclistTDMs[[2]][!bestTop100[Sum>2,unique(bi)]]
+        bestTop100[Sum>2][order(-Sum)] %>% object.size()/10^6
+        bestTop100[Sum>2,unique(bi)]
+        
+        bipred <- bipred[unique(uni),mult="last"]
+        fwrite(bipred,"bigrampredictiontable.csv")
+        fread("bigrampredictiontable.csv")
 
-object.size(bestTop100[!grep("^[0-9]",FirstTerms)])
-key(bestTop100)
-
-bestTop100[,unique(bi)]
-setkey(doclistTDMs[[2]],uni)
-bipred <- doclistTDMs[[2]][!bestTop100[Sum>2,unique(bi)]]
-bestTop100[Sum>2][order(-Sum)] %>% object.size()/10^6
-bestTop100[Sum>2,unique(bi)]
-
-bipred <- bipred[unique(uni),mult="last"]
-fwrite(bipred,"bigrampredictiontable.csv")
-fread("bigrampredictiontable.csv")
-
-fwrite([bestTop100[Sum>3][order(-Sum)],"trigrampredictiontable.csv")
 
 
 #to get the app to put out a value, we need to take an input, take the last two values, then
@@ -275,32 +278,191 @@ fwrite([bestTop100[Sum>3][order(-Sum)],"trigrampredictiontable.csv")
 #
 #When trying the above got nothing for the word fell... should be pretty common. I think I
 # chipped too much away.
-key(doclistTDMs[[2]])
-bipred <- doclistTDMs[[2]][unique(uni),mult="last"]
-object.size(bipred)/10^6
-fwrite(bipred,"bigrampredictiontable.csv")
+        key(doclistTDMs[[2]])
+        bipred <- doclistTDMs[[2]][unique(uni),mult="last"]
+        object.size(bipred)/10^6
+        fwrite(bipred,"bigrampredictiontable.csv")
 #now try to get the prediction
-key(bipred)
-bipred["fell"]
+        key(bipred)
+        bipred["fell"]
 #got something but it's weird
-doclistTDMs[[2]]["fell"]
+        doclistTDMs[[2]]["fell"]
 #didn't set a very good order
-setkey(doclistTDMs[[2]],uni,Sum)
-bipred <- doclistTDMs[[2]][unique(uni),mult="last"]
-fwrite(bipred,"bigrampredictiontable.csv")
+        setkey(doclistTDMs[[2]],uni,Sum)
+        bipred <- doclistTDMs[[2]][unique(uni),mult="last"]
+        fwrite(bipred,"bigrampredictiontable.csv")
 #looks like there are a lot of strange words at the end
-bipred[,which(grepl("z",uni))]
-bipred
-setkey()
-besttri <- doclistTDMs[[3]]
+        bipred[,which(grepl("z",uni))]
+        bipred
+        setkey()
+        besttri <- doclistTDMs[[3]]
 #need a function that will find the best option for a predictive token
 bestMaker <- function(TDM){
         combineInitial(TDM)
-        setkey(TDM,FirstTerms,Sum)
-        temp <- TDM[unique(uni),mult="last"]
-        uncombine(temp)
+        x <- if(!is.null(TDM$FirstTerms)){"FirstTerms"}else{"uni"}
+        setkeyv(TDM,c(x,"Sum"))
+        
+        TDM <- TDM[TDM[,unique(.SD),.SDcols=x],mult="last"]
+        uncombine(TDM)
 }
 
-test <- bestMaker(shortdocs2TDMs[[3]])
-shortdocs2TDMs[[3]] <- getTotals(shortdocs2TDMs[[3]],TRUE)
-shortdocs2TDMs[[3]]
+
+        shortdocs2TDMs <- shortdocs2 %>% TermDocumentMatrices(1:5)
+        lapply(shortdocs2TDMs,getTotals,deleteOthers = TRUE)
+        shortdocs2TDMs[[4]] <- bestMaker(shortdocs2TDMs[[4]])
+#trying with copy so not to mess up the original
+        testdoclistTDM3 <- copy(doclistTDMs[[3]])
+        testdoclistTDM3 <- bestMaker(testdoclistTDM3)
+        setkey(testdoclistTDM3,uni,bi)
+        fwrite(testdoclistTDM3,"tripredict.csv")
+        
+        
+        
+        drive_upload("tripredict.csv")
+        (chicken <- drive_upload(
+                "./tripredict.csv.zip",
+                "tripredict.csv.zip"
+        ))
+        
+        drive_download("tripredict.csv.zip")
+        drive_download(chicken)#pretty slow
+
+        boring_ss <- gs_new("boring", ws_title = "iris-gs_new", input = head(iris),
+                            trim = TRUE, verbose = FALSE)
+
+#giving up on google sheets we want to store the tdms on mysql server
+        library(RMySQL)
+        library(data.table)
+        capstoneDb <- dbConnect(MySQL(),user="capstone", dbname = "capstone",
+                            host="localhost",password = "posTrooF!2")
+        
+        allTables <- dbListTables(capstoneDb)
+        length(allTables)
+        dbWriteTable(capstoneDb,name="triTDM",value = testdoclistTDMs[[3]],overwrite=TRUE)
+        
+        dbGetQuery(capstoneDb, "select tri from testshortbi where uni = '!' and .short-en_US-en_US.news.txt > 1")
+        dbListFields(capstoneDb,"testshortbi")
+        
+        dbGetQuery(capstoneDb,"select tri from triTDM where uni = 'the' and bi = 'one'")
+        dbDisconnect(capstoneDb)
+#so the mysql db approach is real slow
+#see if the zip file can be downloaded quickly from google drive
+
+#the file takes about 90 seconds to download
+#tried to do binary indexing on the mysql db but no luck because of the limit on
+#character vectors.
+#try coding each word as an integer in the unigram list.
+        object.size(unigrams)/10^6
+        unigrams <- copy(doclistTDMs[[1]])
+        unigrams[,Sum := NULL]
+        fwrite(doclistTDMs[[1]])
+        key(unigrams)
+# replace all of the words in the uni and bi columns of the trigram tdm with numbers as they
+# relate to the unigram tdm.. 
+        length(unique(doclistTDMs[[3]]$uni))
+        unigrams[,length(unique(uni))]
+#these aren't the same length which is weird.. I'll figure that out later. Right now
+#just need to do this, so use the unigrams i have
+
+        all(testdoclistTDM3$uni %in% unigrams$uni )
+        lapply(testdoclistTDM3, function(x) all(x %in% unigrams$uni))
+
+#try this out with a small dataset
+        shortunigrams <- shortdocs2TDMs[[1]][,.(uni)]
+        setkey(shortunigrams,uni)
+        shorttrigrams <- shortdocs2TDMs[[3]]
+        lapply(shortdocs2TDMs[[3]], function(x) all(x %in% shortunigrams$uni))
+        firstShortTri <- shortdocs2TDMs[[3]]$uni
+        firstShortTri <- shortunigrams[firstShortTri,which=TRUE]
+        identical(shortunigrams$uni[firstShortTri],shortdocs2TDMs[[3]]$uni)
+        shortdocs2TDMs[[3]]
+#ok so now replace the words in the tri TDM with numbers
+        shortdocs2triTDM <-shortdocs2TDMs[[3]]#checking to see if changing this, changes the initial
+        firstShortTri <- shortdocs2TDMs[[3]]$uni
+        shortdocs2triTDM[,uni := shortunigrams[uni,which=TRUE]]
+        shortdocs2triTDM[[3]] #it is changed!
+        
+#now need a function to do it for the whole table
+indexifyTable = function(TDM,unigrams) {
+        possibilities <- c("uni","bi","tri","four","five")
+        type <- sum(names(TDM) %in% possibilities)
+        
+        for (i in possibilities[1:type])
+                TDM[,(i) := unigrams[TDM[[i]],which=TRUE]]
+}
+
+        shortdocs2TDMs <- TermDocumentMatrices(shortdocs2,1:5)
+        lapply(shortdocs2TDMs,getTotals, deleteOthers = TRUE)
+        shortdocs2TDMs <- lapply(shortdocs2TDMs,removeTokes)
+        shortdocs2TDMs <- lapply(shortdocs2TDMs, bestMaker)
+        shortunigrams <- shortdocs2TDMs[[1]][,.(uni)]
+        #get a testable sample to check if it goes back to its original self
+        firstShortTri <- shortdocs2TDMs[[3]]$uni
+        object.size(shortdocs2TDMs[[3]])/10^6 #check size
+        indexifyTable(shortdocs2TDMs[[3]],shortunigrams)
+        object.size(shortdocs2TDMs[[3]])/10^6 #and again after transformation: about 20% of orginal size!
+        identical(shortunigrams[shortdocs2TDMs[[3]]$uni]$uni,firstShortTri)#it works!
+        shortdocs2TDMs
+        
+#now need to see if the TDMs can be indexed as mysql DBs
+        testdoclistTDMs <- lapply(doclistTDMs,copy)
+        testdoclistTDMs <- lapply(testdoclistTDMs,removeTokes)
+#need to make sure that the keys are correct
+TDMsetkey <- function(TDM){   
+        possibilities <- c("uni","bi","tri","four","five")
+        
+        type <- sum(names(TDM) %in% possibilities)
+        setkeyv(TDM,possibilities[1:(type-1)])
+}
+        lapply(testdoclistTDMs[2:3],TDMsetkey)
+        TDMsetkey(testdoclistTDMs[[1]])
+        lapply(testdoclistTDMs,key)
+        object.size(testdoclistTDMs[[3]])/10^6
+        indexifyTable(testdoclistTDMs[[2]],testdoclistTDMs[[1]])       
+        indexifyTable(testdoclistTDMs[[3]],testdoclistTDMs[[1]])
+
+# I messed up and didn't do everything I should have to the matrix before conversion
+wordifyTable <- function(TDM,unigrams){
+        possibilities <- c("uni","bi","tri","four","five")
+        type <- sum(names(TDM) %in% possibilities)
+        
+        for (i in possibilities[1:type]){
+                TDM[,(i) := unigrams[TDM[[i]]]$uni]
+
+                }        
+}
+
+        wordifyTable(shortdocs2TDMs[[3]],shortdocs2TDMs[[1]]) #it workds
+        #prepare TDMs for shiny
+        testdoclistTDMs[[3]] <- bestMaker(testdoclistTDMs[[3]])
+        lapply(testdoclistTDMs,key)
+        lapply(testdoclistTDMs,TDMsetkey)
+        testdoclistTDMs <- lapply(testdoclistTDMs,bestMaker)
+        lapply(testdoclistTDMs[2:3],indexifyTable,testdoclistTDMs[[1]])
+        lapply(testdoclistTDMs,function(x)object.size(x)/10^6)
+        lapply(testdoclistTDMs,function(x) x[,Sum:=NULL])
+        lapply(testdoclistTDMs,function(x) {
+                fwrite(x,paste0(names(x)[sum(names(x) %in% possibilities)],"TDM.csv"))
+        })
+        lapply(testdoclistTDMs,key)
+        filenames <- unlist(lapply(testdoclistTDMs,function(x) {
+                paste0(names(x)[sum(names(x) %in% possibilities)],"TDM.csv")
+        }))
+        zip("TDMsforShiny.zip",filenames)
+
+WordtoIndex <- function(predictor,conversionTable){
+                conversionTable[predictor,which=TRUE]
+}
+        testdoclistTDMs[[3]]
+        convertWord(testdoclistTDMs[[1]],"0.03mm")
+
+#going to try with the mysql version first so just nee conversion table
+        zip("conversionTable.zip",filenames[1])
+        drive_upload("conversionTable.zip")
+IndextoWord <- function(index, conversionTable){
+        conversionTable[index]$uni
+}
+
+
+
+        dbDisconnect(capstoneDb)

@@ -20,3 +20,6 @@ LenaDocs*
 lenas.R
 badwords*
 test/
+.httr-oauth
+*.zip
+RMySQL.R
