@@ -21,6 +21,15 @@ removeTokes <- function(DT){#function removes unwanted tokens from TDMs
         DT
 }
 
+bestMaker <- function(TDM){#chooses the best (most frequent) result from given predictors for a TDM
+        combineInitial(TDM)
+        x <- if(!is.null(TDM$FirstTerms)){"FirstTerms"}else{"uni"}
+        setkeyv(TDM,c(x,"Sum"))
+        
+        TDM <- TDM[TDM[,unique(.SD),.SDcols=x],mult="last"]
+        uncombine(TDM)
+}
+
 combineInitial <- function(TDM){
         columns <- ncol(TDM)
         possibilities <- c("uni","bi","tri","four","five")
@@ -47,14 +56,6 @@ uncombine <- function(TDM){#make sure to set this to an object
 }
 
 
-bestMaker <- function(TDM){#chooses the best (most frequent) result from given predictors for a TDM
-        combineInitial(TDM)
-        x <- if(!is.null(TDM$FirstTerms)){"FirstTerms"}else{"uni"}
-        setkeyv(TDM,c(x,"Sum"))
-        
-        TDM <- TDM[TDM[,unique(.SD),.SDcols=x],mult="last"]
-        uncombine(TDM)
-}
 
 indexifyTable = function(TDM,unigrams) {#changes a TDM into a bunch of indices referring to 
                                                 #a key with corresponding words
@@ -79,7 +80,7 @@ TDMsetkey <- function(TDM){   #sets a useful key for prediction for given TDM
         possibilities <- c("uni","bi","tri","four","five")
         
         type <- sum(names(TDM) %in% possibilities)
-        setkeyv(TDM,possibilities[1:(type-1)])
+        setkeyv(TDM,possibilities[(type-1):1])#set key backwards for ease of use in prediction
 }
 
 WordtoIndex <- function(predictor,conversionTable){#gets the index of a word from the key

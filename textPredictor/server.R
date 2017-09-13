@@ -13,46 +13,48 @@ library(stringi)
 library(magrittr)
 library(googledrive)
 library(RMySQL)
-WordtoIndex <- function(predictor,conversionTable){
-        conversionTable[predictor,which=TRUE]
-}
-IndextoWord <- function(index, conversionTable){
-        conversionTable[index]$uni
-}
+source("./Shinyfunctions.R")
 shinyServer(function(input, output) {
+     
+        output$loading <- renderText(loadingText)
+
+#requirements for final version
+      
+                unzip("./TDMsforShinynoSum.zip")
+                filenames <- fread("filenames.csv")$filenames
+                x = 4
+                TDM <- lapply(filenames[1:x],fread)
+                lapply(TDM,TDMsetkey)
+      
+#if uncommented, below can restore tables to original
+        # lapply(TDM[2:4],wordifyTable,TDM[[1]])
+        # lapply(TDM,TDMsetkey)
+        
         # capstoneDb <- dbConnect(MySQL(),user="capstone", dbname = "capstone",
         #                         host="localhost",password = "posTrooF!2")
-        # zipID<-as_id("0B9WmtdzaeOqld0Ntel9xRkVsenc")#id obtained from googledrive upload
-        # drive_download(zipID, overwrite = TRUE)
-         unzip("./conversionTable.zip")
-         conversiontable <- fread("./uniTDM.csv")
-         setkey(conversiontable,uni)
-         unzip("./tripredict.csv.zip")
-         tri <- fread("./tripredict.csv")
-         setkey(tri,uni,bi)
-       # bi <- fread("../bigrampredictiontable.csv")
-       # setkey(bi,uni)
-       
+        
+        
+################################        
        y <- reactive({
-                
-                 input <- input$firstWords %>% stri_trans_tolower() %>% 
+
+                 input <- input$firstWords %>% stri_trans_tolower() %>%
                          stri_extract_all_words() %>% unlist()
-                 # wordIndices <- c(input[length(input)-1],input[length(input)]) %>%
-                 #         sapply(WordtoIndex,conversionTable = conversiontable)
-               
-                 if(length(input) >= 2){
-       tripred <- tri[.(input[length(input)-1],input[length(input)])]$tri
+
+                   wordIndices <- input %>% lapply(WordtoIndex,conversionTable = TDM[[1]])
+
+                  multiPred(TDM[2:x],wordIndices,TDM[[1]])  %>%
+                                 predictionchooser(TDM[[1]])
+
+                
+                  
+#below  is some code that could be used if a mysql database was being used
+                         
                         #  selector <- "select tri from triTDM where uni ="
                         #  query <- paste(selector,wordIndices[1],"and bi =",wordIndices[2])
-                        # tripred <- dbGetQuery(capstoneDb, query)$tri %>% IndextoWord(conversiontable)
-                         #if(!is.na(tripred)){
-                                 tripred
-                         #}else{
-                          #       doclistTDMs[[2]][input[length(input)]]$bi
-                         #}
-                 }
-          #       paste(input[length(input)-1],input[length(input)])
-        })
+                        # tripred <- dbGetQuery(capstoneDb, query)$tri %>% IndextoWord(TDMs[[1]])
+
+       
+      })
         output$prediction <- renderText(y())
 })
 

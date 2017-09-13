@@ -391,6 +391,12 @@ indexifyTable = function(TDM,unigrams) {
                 TDM[,(i) := unigrams[TDM[[i]],which=TRUE]]
 }
 
+#try things out with short doclist
+        loadDocs()
+        set.seed(39384)
+        doclist <- multisplit(doclist)
+        shortdocs2 <- lapply(doclist,lapply,head,100)
+        names(shortdocs2) <- paste("short-",names(shortdocs2),sep="")
         shortdocs2TDMs <- TermDocumentMatrices(shortdocs2,1:5)
         lapply(shortdocs2TDMs,getTotals, deleteOthers = TRUE)
         shortdocs2TDMs <- lapply(shortdocs2TDMs,removeTokes)
@@ -414,12 +420,11 @@ TDMsetkey <- function(TDM){
         type <- sum(names(TDM) %in% possibilities)
         setkeyv(TDM,possibilities[1:(type-1)])
 }
-        lapply(testdoclistTDMs[2:3],TDMsetkey)
-        TDMsetkey(testdoclistTDMs[[1]])
-        lapply(testdoclistTDMs,key)
-        object.size(testdoclistTDMs[[3]])/10^6
-        indexifyTable(testdoclistTDMs[[2]],testdoclistTDMs[[1]])       
-        indexifyTable(testdoclistTDMs[[3]],testdoclistTDMs[[1]])
+        lapply(doclistTDMs,TDMsetkey)
+        lapply(doclistTDMs,key)
+        object.size(doclistTDMs[[3]])/10^6
+        indexifyTable(doclistTDMs[[2]],testdoclistTDMs[[1]])       
+        indexifyTable(doclistTDMs[[3]],testdoclistTDMs[[1]])
 
 # I messed up and didn't do everything I should have to the matrix before conversion
 wordifyTable <- function(TDM,unigrams){
@@ -435,21 +440,13 @@ wordifyTable <- function(TDM,unigrams){
         wordifyTable(shortdocs2TDMs[[3]],shortdocs2TDMs[[1]]) #it workds
         #prepare TDMs for shiny
         testdoclistTDMs[[3]] <- bestMaker(testdoclistTDMs[[3]])
-        lapply(testdoclistTDMs,key)
-        lapply(testdoclistTDMs,TDMsetkey)
-        testdoclistTDMs <- lapply(testdoclistTDMs,bestMaker)
-        lapply(testdoclistTDMs[2:3],indexifyTable,testdoclistTDMs[[1]])
-        lapply(testdoclistTDMs,function(x)object.size(x)/10^6)
-        lapply(testdoclistTDMs,function(x) x[,Sum:=NULL])
-        lapply(testdoclistTDMs,function(x) {
-                fwrite(x,paste0(names(x)[sum(names(x) %in% possibilities)],"TDM.csv"))
-        })
-        lapply(testdoclistTDMs,key)
-        filenames <- unlist(lapply(testdoclistTDMs,function(x) {
-                paste0(names(x)[sum(names(x) %in% possibilities)],"TDM.csv")
-        }))
-        zip("TDMsforShiny.zip",filenames)
-
+        lapply(doclistTDMs,key)
+        lapply(doclistTDMs,TDMsetkey)
+        doclistTDMs <- lapply(doclistTDMs,bestMaker)
+        lapply(doclistTDMs[2:3],indexifyTable,doclistTDMs[[1]])
+        lapply(doclistTDMs,function(x)object.size(x)/10^6)
+        lapply(doclistTDMs,function(x) x[,Sum:=NULL])
+        
 WordtoIndex <- function(predictor,conversionTable){
                 conversionTable[predictor,which=TRUE]
 }
@@ -471,6 +468,72 @@ IndextoWord <- function(index, conversionTable){
 }
 
 
+#want to get quadragram prediction into the mix
+        doclistTDMs[[4]] <- TermDocumentMatrices(doclist,4)
+        gc()
+        doclistTDMs[[4]] <- doclistTDMs[[4]][[4]] #remove sublist
+        lapply(doclistTDMs,getTotals,deleteOthers = TRUE)#add sum column
+        doclistTDMs <- lapply(doclistTDMs,removeTokes)#remove unwanted tokens
+        lapply(doclistTDMs,key)
+        lapply(doclistTDMs,TDMsetkey)#set key appropriateley
+        doclistTDMs <- lapply(doclistTDMs,bestMaker)#take only the best prediction for each set of predictors
+        preindexSize <- lapply(doclistTDMs,function(x)object.size(x)/10^6)#check size
+        lapply(doclistTDMs,function(x) x[,Sum:=NULL])#remove the Sum column It's done its duty
+        #in following do iteration manually. Write a function for it someday maybe :)
+        lapply(doclistTDMs[[4]], function(x) all(x %in% doclistTDMs[[1]]$uni))#check if all columns are covered by unigrams
+        #everything looks good. Now time to index the table
+        lapply(doclistTDMs[2:4],indexifyTable,doclistTDMs[[1]])#reduce size by creating indexed version
+        postindexSize <- lapply(doclistTDMs,function(x)object.size(x)/10^6)#check size
+        lapply(doclistTDMs,function(x) x[,Sum:=NULL])#remove sum column as it is no longer needed
+        postSumremovedSize <- lapply(doclistTDMs,function(x)object.size(x)/10^6)#check size
+        #trying to make a word prediction
+        
+        lapply(doclistTDMs,key)
+        lapply(doclistTDMs,TDMsetkey)
+        words <- list("my","leg","fell")
+        indices <- lapply(words,WordtoIndex,doclistTDMs[[1]])
+        
+        makePrediction(doclistTDMs[[4]],indices,doclistTDMs[[1]])#function from Shinyfunctions.R
+        preds <- multiPred(doclistTDMs[2:4],indices,doclistTDMs[[1]])
+        (pred<-predictionchooser(preds,shortdocs2TDMs[[1]]))
+        #this can be used to write files
+        possibilities <- c("uni","bi","tri","four","five")
+        filenames <- unlist(lapply(doclistTDMs,function(x) {
+                paste0("./textPredictor/",names(x)[sum(names(x) %in% possibilities)],".TDM.csv")
+        }))
+        fwrite(data.table(filenames = filenames),"./textPredictor/filenames.csv")#so shiny can access them
+        lapply(doclistTDMs,function(x) {
+                fwrite(x,paste0("textPredictor/", 
+                                names(x)[sum(names(x) %in% possibilities)],".TDM.csv"))
+        })
+        fread("./textPredictor/textPredictor/bi.TDM.csv")
+        zip("textPredictor/TDMsforShinynoSum.zip",paste0("textPredictor/",filenames))
+        lapply(doclistTDMs,str)
+        
+        #in case there are too many mySQL connections open
+        lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
 
-        dbDisconnect(capstoneDb)
+        #try things out with short doclist
+        #if doclist doesn't exist
+        loadDocs()
+        set.seed(39384)
+        doclist <- multisplit(doclist)
+        #if doclist exists
+        shortdocs2 <- lapply(doclist,lapply,head,100)
+        names(shortdocs2) <- paste("short-",names(shortdocs2),sep="")
+        shortdocs2TDMs <- TermDocumentMatrices(shortdocs2,1:5)
+        lapply(shortdocs2TDMs,getTotals, deleteOthers = TRUE)
+        shortdocs2TDMs <- lapply(shortdocs2TDMs,removeTokes)
+        shortdocs2TDMs <- lapply(shortdocs2TDMs, bestMaker)
+        lapply(shortdocs2TDMs[2:5],indexifyTable,shortdocs2TDMs[[1]])
+        lapply(shortdocs2TDMs,key)
+        lapply(shortdocs2TDMs,TDMsetkey)
+        
+        swords <- list("go")
+        sindices <- lapply(words,WordtoIndex,shortdocs2TDMs[[1]])
+        shortdocs2TDMs[[3]][(indices[2:3])]$tri %>% IndextoWord(shortdocs2TDMs[[1]])
+        
+        makePrediction(shortdocs2TDMs[[4]],indices,shortdocs2TDMs[[1]])#function from Shinyfunctions.R
+        indices[3:1]
+        
         

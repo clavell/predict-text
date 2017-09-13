@@ -13,14 +13,15 @@ library(shiny)
 shinyUI(fluidPage(
   
   # Application title
-  titlePanel("Text prediction model"),
+  titlePanel("Text prediction"),
   
   # Sidebar with a slider input for number of bins 
   sidebarLayout(
     sidebarPanel(
+            h3("Please enjoy 20 - 30 seconds of solitude while loading.."),
        textInput("firstWords",
                    "Input your text here",
-                 "my leg fell")
+                 "Enter your text while you wait!")
     ),
     
     # Show a plot of the generated distribution
