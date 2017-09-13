@@ -77,7 +77,7 @@ createTDM <- function(docs){ #takes a list of documents to make into TDM
         
         f_dowle2(TDM)
 #Now let's clean up the environment.
-        rm(list = grep("[^(doclist|TDM)]",ls(),value = TRUE))
+        rm(list = grep("[^doclistTDM]",ls(),value = TRUE))
         
 #Now that there is a TDM for unigrams it has to be done with bigrams and trigrams
 #Maybe the ngram package has something for me here. To be continued

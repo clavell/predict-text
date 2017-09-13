@@ -13,32 +13,38 @@ library(stringi)
 library(magrittr)
 library(googledrive)
 library(RMySQL)
-convertWord <- function(predictor,conversionTable){
+WordtoIndex <- function(predictor,conversionTable){
         conversionTable[predictor,which=TRUE]
 }
+IndextoWord <- function(index, conversionTable){
+        conversionTable[index]$uni
+}
 shinyServer(function(input, output) {
-        capstoneDb <- dbConnect(MySQL(),user="capstone", dbname = "capstone",
-                                host="localhost",password = "posTrooF!2")
-        zipname<-"conversionTable.zip"
-        drive_download(zipname)
-        unzip(zipname)
+        # capstoneDb <- dbConnect(MySQL(),user="capstone", dbname = "capstone",
+        #                         host="localhost",password = "posTrooF!2")
+        # zipID<-as_id("0B9WmtdzaeOqld0Ntel9xRkVsenc")#id obtained from googledrive upload
+        # drive_download(zipID, overwrite = TRUE)
+         unzip("./conversionTable.zip")
          conversiontable <- fread("./uniTDM.csv")
-          setkey(tri,uni,bi)
+         setkey(conversiontable,uni)
+         unzip("./tripredict.csv.zip")
+         tri <- fread("./tripredict.csv")
+         setkey(tri,uni,bi)
        # bi <- fread("../bigrampredictiontable.csv")
        # setkey(bi,uni)
        
        y <- reactive({
-             
+                
                  input <- input$firstWords %>% stri_trans_tolower() %>% 
                          stri_extract_all_words() %>% unlist()
-                 wordIndices <- c(input[length(input)-1],input[length(input)]) %>%
-                         sapply(convertWord,conversiontable)
+                 # wordIndices <- c(input[length(input)-1],input[length(input)]) %>%
+                 #         sapply(WordtoIndex,conversionTable = conversiontable)
                
                  if(length(input) >= 2){
-       #tripred <- tri[.(input[length(input)-1],input[length(input)])]$tri
-                         selector <- "select tri from triTDM where uni ="
-                         query <- paste(selector,wordIndices[1],"and bi =",wordIndices[2])
-                        tripred <- dbGetQuery(capstoneDb, query)$tri %>% IndextoWord()
+       tripred <- tri[.(input[length(input)-1],input[length(input)])]$tri
+                        #  selector <- "select tri from triTDM where uni ="
+                        #  query <- paste(selector,wordIndices[1],"and bi =",wordIndices[2])
+                        # tripred <- dbGetQuery(capstoneDb, query)$tri %>% IndextoWord(conversiontable)
                          #if(!is.na(tripred)){
                                  tripred
                          #}else{

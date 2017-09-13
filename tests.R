@@ -458,7 +458,14 @@ WordtoIndex <- function(predictor,conversionTable){
 
 #going to try with the mysql version first so just nee conversion table
         zip("conversionTable.zip",filenames[1])
-        drive_upload("conversionTable.zip")
+        (convTable <- drive_upload("conversionTable.zip"))
+
+        drive_get(as_id(convTable$id))
+        (convtable <- convTable %>% 
+                        drive_share(role = "reader", type = "anyone"))
+        library(dplyr)
+        write.csv(select(convtable,name,id,shared),"conversiontableDribble.csv")
+        convtable$id
 IndextoWord <- function(index, conversionTable){
         conversionTable[index]$uni
 }
@@ -466,3 +473,4 @@ IndextoWord <- function(index, conversionTable){
 
 
         dbDisconnect(capstoneDb)
+        
