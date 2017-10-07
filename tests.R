@@ -537,3 +537,21 @@ IndextoWord <- function(index, conversionTable){
         indices[3:1]
         
         
+        #Testing out the algorithm: need to draw from the test set 5 random entries
+        samplenums <- round(runif(5,min=1,
+                                  max = length(doclist$`en_US-en_US.blogs.txt`$test)))
+        
+        doclist[[1]]$test[samplenums]
+        
+        
+        #there is a problem with predicting outside of the app with a different corpus.
+        #try the code here to see if there is the same problem.
+        
+        y <- "he"
+        input <- y %>% stri_trans_tolower() %>%
+                stri_extract_all_words() %>% unlist()
+        
+        wordIndices <- input %>% lapply(WordtoIndex,conversionTable = doclistTDMs[[1]])
+        
+        multiPred(lenadocsTDMs[2:4],wordIndices,lenadocsTDMs[[1]])  %>%
+                predictionchooser(lenadocsTDMs[[1]])

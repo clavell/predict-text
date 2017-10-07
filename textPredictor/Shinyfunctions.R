@@ -2,8 +2,9 @@
 makePrediction <- function(TDM,wordIndices,conversionTable){
         # require(data.table)
         # require(magrittr)
+        possibilities <- c("uni","bi","tri","four","five")
         last <- length(wordIndices)
-        TDM[(wordIndices[last:1])][[length(TDM)]] %>% 
+        TDM[(wordIndices[last:1])][[sum(possibilities %in% names(TDM))]] %>% #the prediction has to be the last column?
                 IndextoWord(conversionTable)
 }
 
@@ -16,13 +17,15 @@ predictionchooser <- function(Predictions,wordlist){#Predictions is a list of pr
         n = length(Predictions)
         pred <- Predictions[[n]]
         
-        while(is.na(pred)|length(pred)>1|is.null(pred)){
+        while(any(is.na(pred))|length(pred)>1|any(is.null(pred))){
         n = n - 1
-        if(n > 1){
+        if(n >= 1){
                 pred <- Predictions[[n]]
                 }else{
                 pred <- wordlist[round(runif(1,min = 1, max = wordlist[,.N]))]$uni
                 }
+                
+        
         }
         pred
 }
@@ -40,4 +43,20 @@ WordtoIndex <- function(predictor,conversionTable){#gets the index of a word fro
 
 IndextoWord <- function(index, conversionTable){#opposite of WordtoIndex()
         conversionTable[index]$uni
+}
+
+
+
+createModel <- function(Docs,...){#takes a list of character vectors and makes a prediction
+        arguments <- list(...)
+        TDMs <- TermDocumentMatrices(Docs,arguments$n)
+        lapply(TDMs,getTotals,deleteOthers=TRUE)
+        TDMs <- lapply(TDMs,removeTokes)
+        TDMs <- lapply(TDMs, bestMaker)
+        #lapply(TDMs,function(x) x[,Sum:=NULL])#remove sum column as the function relies on the
+        #last column being the prediction (makePrediction())
+        lapply(TDMs,TDMsetkey)
+        lapply(TDMs[2:max(arguments$n)],indexifyTable,TDMs[[1]])
+        lapply(TDMs,TDMsetkey)
+        TDMs
 }

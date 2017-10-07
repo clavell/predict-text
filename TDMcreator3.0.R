@@ -35,7 +35,7 @@ TDMsforManydocs <- function(corp,n){#corp is list of documents for which you wan
                         createtokens(n) %>%
                         TDMsforOneDoc(n,names(corp)[i])
         }
-        
+        gc()#the previous is a very memory intensive procedure. Make sure to reclaim some memory.
         names(TDMs) <- names(corp)
         c("uni", "bi", "tri", "four", "five")[1:length(n)]
         TDMs
@@ -85,7 +85,9 @@ createtokens <- function(DTdoc,N){#DTdoc is a document that has been uni tokeniz
 
 TDMsforOneDoc <- function(doc,n,docname){#doc is a document as a datatable; tokenized, 
         #n is vector of unique integers n>=1, n<=5
-        
+        gc()#this function is usually run many times and once a document has been categorized
+                #it is not longer needed. memory doesn't seem to be automatically freed up, so
+                #we do that here.
         name <- paste(deparse(substitute(doc)),docname,sep="")
         TDMlist <- list()
         for(i in n){
