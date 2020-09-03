@@ -1,4 +1,4 @@
-#functions useful in shiny
+#functions useful in shiny development
 makePrediction <- function(TDM,wordIndices,conversionTable){
         # require(data.table)
         # require(magrittr)
@@ -19,7 +19,7 @@ predictionchooser <- function(Predictions,wordlist){#Predictions is a list of pr
         
         while(any(is.na(pred))|length(pred)>1|any(is.null(pred))){
         n = n - 1
-        if(n >= 1){
+        if(n > 1){
                 pred <- Predictions[[n]]
                 }else{
                 pred <- wordlist[round(runif(1,min = 1, max = wordlist[,.N]))]$uni
